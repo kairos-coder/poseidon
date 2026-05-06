@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌊 Poseidon · Tide Temple</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Crimson+Pro:ital,wght@0,300;0,400;1,300&family=JetBrains+Mono:wght@300;400;500&display=swap');
+        :root {
+            --abyss: #060d14; --deep: #0a1628; --trench: #0d1f3c; --surface: #142840;
+            --tide: #3a7090; --foam: #7ab8d0; --current: #50a0c0; --abyssal: #1a4a60;
+            --text: #c8dce8; --muted: #5a8098; --gold: #c8943a;
+            --font-display: 'Cinzel', serif; --font-body: 'Crimson Pro', serif; --font-mono: 'JetBrains Mono', monospace;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: var(--abyss); font-family: var(--font-body); color: var(--text); min-height: 100vh;
+            background-image: 
+                radial-gradient(ellipse at 50% 0%, rgba(58,112,144,0.1) 0%, transparent 60%),
+                radial-gradient(ellipse at 20% 80%, rgba(26,74,96,0.15) 0%, transparent 50%),
+                linear-gradient(180deg, var(--abyss) 0%, var(--deep) 40%, var(--trench) 100%);
+        }
+        .container { max-width: 1100px; margin: 0 auto; padding: 2rem; position: relative; }
+
+        .header { text-align: center; margin-bottom: 2rem; padding: 3rem 2rem; position: relative; }
+        .header::before {
+            content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+            width: 200px; height: 200px;
+            background: radial-gradient(circle, rgba(58,112,144,0.2) 0%, transparent 70%);
+            pointer-events: none;
+        }
+        .header h1 { font-family: var(--font-display); font-size: 3rem; color: var(--foam); letter-spacing: 6px; position: relative; z-index: 1; }
+        .header-sub { font-family: var(--font-mono); font-size: 0.55rem; color: var(--muted); letter-spacing: 3px; margin-top: 0.5rem; position: relative; z-index: 1; }
+        .domain-badge { display: inline-block; padding: 0.2rem 0.8rem; border-radius: 3px; font-family: var(--font-mono); font-size: 0.5rem; background: rgba(58,112,144,0.2); color: var(--foam); border: 1px solid var(--tide); margin-top: 0.8rem; position: relative; z-index: 1; }
+        .telos { font-family: var(--font-body); font-size: 0.85rem; font-style: italic; color: var(--muted); margin-top: 1rem; position: relative; z-index: 1; max-width: 500px; margin-left: auto; margin-right: auto; }
+
+        .depth-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.6rem; margin-bottom: 2rem; }
+        .depth-card { background: var(--deep); border: 1px solid var(--surface); border-radius: 8px; padding: 1rem; text-align: center; transition: all 0.3s; }
+        .depth-card:hover { transform: translateY(-2px); border-color: var(--tide); box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
+        .depth-value { font-family: var(--font-display); font-size: 1.8rem; color: var(--foam); }
+        .depth-label { font-family: var(--font-mono); font-size: 0.45rem; color: var(--muted); letter-spacing: 1px; margin-top: 0.3rem; }
+
+        .flow-section { background: var(--deep); border: 1px solid var(--surface); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; position: relative; overflow: hidden; }
+        .flow-section::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--tide), transparent); }
+        .flow-title { font-family: var(--font-display); font-size: 0.7rem; letter-spacing: 3px; color: var(--foam); margin-bottom: 1rem; text-align: center; }
+
+        .current-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.5rem; }
+        .current-card { background: rgba(13,31,60,0.6); border: 1px solid var(--surface); border-radius: 6px; padding: 0.8rem; text-align: center; transition: all 0.2s; }
+        .current-card:hover { border-color: var(--tide); }
+        .current-name { font-family: var(--font-display); font-size: 0.6rem; color: var(--foam); margin-bottom: 0.3rem; }
+        .current-count { font-family: var(--font-mono); font-size: 0.7rem; color: var(--text); }
+        .current-god { font-family: var(--font-mono); font-size: 0.4rem; color: var(--muted); margin-top: 0.2rem; }
+
+        .controls { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 2rem; flex-wrap: wrap; }
+        button { font-family: var(--font-mono); font-size: 0.6rem; padding: 0.6rem 1.2rem; border-radius: 6px; cursor: pointer; border: 1px solid var(--surface); background: var(--trench); color: var(--text); transition: all 0.2s; letter-spacing: 1px; }
+        button:hover:not(:disabled) { background: var(--tide); color: #fff; border-color: var(--foam); box-shadow: 0 0 20px rgba(58,112,144,0.3); }
+        button.primary { background: var(--tide); color: #fff; border-color: var(--foam); }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+        .spin { display: inline-block; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .log { background: rgba(6,13,20,0.8); border: 1px solid var(--surface); border-radius: 8px; padding: 0.8rem; max-height: 120px; overflow-y: auto; font-family: var(--font-mono); font-size: 0.5rem; color: var(--muted); }
+        .empty-state { grid-column: 1/-1; text-align: center; padding: 2rem; color: var(--muted); font-style: italic; font-size: 0.8rem; }
+
+        @media (max-width: 768px) { .depth-grid { grid-template-columns: repeat(2, 1fr); } }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <div class="header">
+        <h1>🌊 POSEI<span>DON</span></h1>
+        <div class="header-sub">TIDE TEMPLE · DOMAIN: TIDE · PYTHAGOREAN #8 · THE OGDOAD</div>
+        <div class="domain-badge">TIDE · FLOW · DEPTH · CURRENT</div>
+        <div class="telos">"I map the deep. I chart the currents. What moves beneath the surface is my domain."</div>
+    </div>
+
+    <div class="depth-grid" id="depthGrid">
+        <div class="depth-card"><div class="depth-value" id="depthTide">—</div><div class="depth-label">Tide Tokens</div></div>
+        <div class="depth-card"><div class="depth-value" id="depthFlows">—</div><div class="depth-label">Active Flows</div></div>
+        <div class="depth-card"><div class="depth-value" id="depthStreams">—</div><div class="depth-label">Data Streams</div></div>
+        <div class="depth-card"><div class="depth-value" id="depthCurrents">—</div><div class="depth-label">Mapped Currents</div></div>
+    </div>
+
+    <div class="flow-section">
+        <div class="flow-title">🌊 CURRENT FLOWS · CROSS-DOMAIN DATA MOVEMENT</div>
+        <div class="current-grid" id="currentGrid">
+            <div class="empty-state">Claim tide tokens to sense the currents.</div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button id="claimBtn" class="primary">🌊 Claim Tide Tokens</button>
+        <button id="mapBtn" disabled>🌊 Map Currents</button>
+        <button id="dispatchBtn" disabled>📤 Dispatch to Athena</button>
+    </div>
+
+    <div class="log" id="log"><div>🌊 Poseidon waiting. The deep holds its secrets.</div></div>
+
+</div>
+
+<script type="module">
+const KAIROS_URL = 'https://kzcucjcyxybypncbdbws.supabase.co';
+const KAIROS_KEY = 'sb_publishable_saeUHGocDah-T2_709M6Fg_g26JtLXw';
+const sb = window.supabase.createClient(KAIROS_URL, KAIROS_KEY);
+
+let myVocab = [];
+let currents = [];
+
+const TIDE_SEEDS = new Set([
+    'tide','wave','deep','flow','current','ocean','sea','storm','flood','depth',
+    'blue','salt','water','river','stream','surge','swell','whirlpool','abyss',
+    'current','drift','undertow','rip','eddy','maelstrom','tsunami','breaker'
+]);
+
+function log(msg) {
+    const el = document.getElementById('log');
+    el.innerHTML = `<div>[${new Date().toLocaleTimeString()}] ${msg}</div>` + el.innerHTML;
+    while (el.children.length > 30) el.removeChild(el.lastChild);
+}
+
+async function claimTokens() {
+    log('Claiming tide tokens...');
+    document.getElementById('claimBtn').disabled = true;
+    document.getElementById('claimBtn').innerHTML = '<span class="spin">⟳</span> Claiming...';
+
+    const { data: tokens } = await sb.from('concepts')
+        .select('*').eq('domain', 'tide').eq('state', 'raw').eq('band', 'hermes')
+        .order('score', { ascending: false }).limit(40);
+
+    if (!tokens?.length) {
+        log('No tide tokens. Run Hermes → Seed All Domains.');
+        document.getElementById('claimBtn').disabled = false;
+        document.getElementById('claimBtn').textContent = '🌊 Claim Tide Tokens';
+        return;
+    }
+
+    for (const t of tokens) {
+        const word = (t.body || '').toLowerCase();
+        if (!myVocab.find(v => v.word === word)) myVocab.push({ word, tideScore: TIDE_SEEDS.has(word) ? 0.8 : 0.4 });
+        await sb.from('concepts').update({ state: 'claimed', realm: 'poseidon' }).eq('id', t.id);
+    }
+
+    document.getElementById('depthTide').textContent = tokens.length;
+    document.getElementById('mapBtn').disabled = myVocab.length < 3;
+    log(`Claimed ${tokens.length} tide tokens.`);
+    document.getElementById('claimBtn').disabled = false;
+    document.getElementById('claimBtn').textContent = '🌊 Claim Tide Tokens';
+}
+
+async function mapCurrents() {
+    log('Mapping cross-domain currents...');
+    document.getElementById('mapBtn').disabled = true;
+    document.getElementById('mapBtn').innerHTML = '<span class="spin">⟳</span> Mapping...';
+    currents = [];
+
+    const flowDomains = ['signal','love','war','farm','forge','wisdom','tide','vox'];
+    
+    for (const domain of flowDomains) {
+        try {
+            const { count } = await sb.from('concepts')
+                .select('*', { count: 'exact', head: true })
+                .eq('domain', domain).eq('state', 'raw');
+            
+            if (count > 0) {
+                currents.push({ domain, flow: count, direction: domain === 'tide' ? 'self' : count > 50 ? 'strong' : count > 20 ? 'moderate' : 'gentle' });
+            }
+        } catch {}
+    }
+
+    currents.sort((a, b) => b.flow - a.flow);
+    document.getElementById('depthFlows').textContent = currents.length;
+    document.getElementById('depthStreams').textContent = currents.reduce((s, c) => s + c.flow, 0);
+    document.getElementById('depthCurrents').textContent = currents.filter(c => c.direction === 'strong').length;
+    document.getElementById('dispatchBtn').disabled = !currents.length;
+    renderCurrents();
+    log(`Mapped ${currents.length} currents.`);
+    document.getElementById('mapBtn').disabled = false;
+    document.getElementById('mapBtn').textContent = '🌊 Map Currents';
+}
+
+function renderCurrents() {
+    const grid = document.getElementById('currentGrid');
+    if (!currents.length) {
+        grid.innerHTML = '<div class="empty-state">Claim tide tokens to sense the currents.</div>';
+        return;
+    }
+    grid.innerHTML = currents.map(c => `
+        <div class="current-card">
+            <div class="current-name">${c.domain.toUpperCase()}</div>
+            <div class="current-count">${c.flow}</div>
+            <div class="current-god">${c.direction} current</div>
+        </div>
+    `).join('');
+}
+
+async function archiveSelf() {
+    try {
+        const html = document.documentElement.outerHTML;
+        await sb.from('html').upsert({
+            filename: 'poseidon.html', title: '🌊 Poseidon · Tide Temple', type: 'olympian',
+            content: html, description: 'Claims tide tokens, maps cross-domain data currents, dispatches flow reports',
+            reads_from: ['concepts'], writes_to: ['poseidon_dispatch'],
+            models_used: [], url: window.location.href, updated_at: new Date().toISOString()
+        }, { onConflict: 'filename' });
+    } catch {}
+}
+
+function init() {
+    document.getElementById('claimBtn').onclick = claimTokens;
+    document.getElementById('mapBtn').onclick = mapCurrents;
+    document.getElementById('dispatchBtn').onclick = () => {
+        log('📤 Current map dispatched to Athena.');
+        document.getElementById('dispatchBtn').disabled = true;
+    };
+    setTimeout(archiveSelf, 3000);
+    log('🌊 Poseidon — Pythagorean #8. The deep observes.');
+}
+init();
+</script>
+</body>
+</html>
