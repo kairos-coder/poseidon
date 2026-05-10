@@ -59,50 +59,41 @@
 
         .section-title { font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 3px; color: var(--mist); margin-bottom: 0.8rem; }
 
-        .image-list { display: flex; flex-direction: column; gap: 0.8rem; margin-bottom: 1.5rem; }
-        .image-card { 
+        .image-queue { display: flex; flex-direction: column; gap: 0.8rem; margin-bottom: 1.5rem; }
+        .queue-card { 
             background: var(--deep); border: 1px solid var(--surface); border-radius: 10px;
             overflow: hidden; transition: all 0.3s;
         }
-        .image-card.processed { border-color: var(--poseidon); }
-        .image-card img { width: 100%; display: block; }
-        .image-info { padding: 0.8rem; }
-        .image-info .prompt { font-family: var(--font-body); font-size: 0.75rem; font-style: italic; color: var(--pale); margin-bottom: 0.4rem; }
-        .image-info .meta { font-family: var(--font-mono); font-size: 0.5rem; color: var(--mist); display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: center; }
-        .domain-tag { padding: 0.15rem 0.5rem; border-radius: 3px; font-size: 0.5rem; }
-        .tag-love { background: rgba(176,88,112,0.2); color: #c07080; }
-        .tag-war { background: rgba(192,56,42,0.2); color: #d05040; }
-        .tag-wisdom { background: rgba(106,136,152,0.2); color: #8aa8b8; }
-        .tag-light { background: rgba(212,168,80,0.2); color: #d4a850; }
-        .tag-farm { background: rgba(90,128,64,0.2); color: #7ab060; }
-        .tag-forge { background: rgba(192,112,64,0.2); color: #c07040; }
-        .tag-crown { background: rgba(90,122,170,0.2); color: #8a9ac0; }
-        .tag-tide { background: rgba(58,112,144,0.2); color: #5a9ab0; }
-        .tag-wild { background: rgba(90,128,80,0.2); color: #6a9a60; }
-        .tag-storm { background: rgba(154,138,192,0.2); color: #a090c0; }
-        .tag-signal { background: rgba(212,184,74,0.2); color: #d4b84a; }
-        .tag-vox { background: rgba(138,64,128,0.2); color: #b060a0; }
+        .queue-card img { width: 100%; display: block; }
+        .queue-info { padding: 0.8rem; }
+        .queue-prompt { font-family: var(--font-body); font-size: 0.75rem; font-style: italic; color: var(--pale); margin-bottom: 0.4rem; }
 
-        .palette-row { display: flex; gap: 0.3rem; margin-top: 0.4rem; }
-        .palette-swatch { width: 24px; height: 24px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); }
-
-        .extracted-text { 
-            font-family: var(--font-mono); font-size: 0.5rem; color: var(--mist); 
-            margin-top: 0.4rem; padding: 0.4rem; background: rgba(0,0,0,0.3); border-radius: 4px;
-        }
-
-        .process-btn {
-            width: 100%; padding: 0.6rem; font-size: 0.7rem; font-weight: bold;
+        .decompress-btn {
+            width: 100%; padding: 0.7rem; font-size: 0.7rem; font-weight: bold;
             background: linear-gradient(135deg, var(--poseidon), var(--abyss));
             color: var(--foam); border: 1px solid var(--tide); border-radius: 8px;
             cursor: pointer; font-family: var(--font-mono); letter-spacing: 2px;
-            min-height: 44px; transition: all 0.3s; margin-top: 0.5rem;
+            min-height: 44px; transition: all 0.3s;
         }
-        .process-btn:hover:not(:disabled) { 
+        .decompress-btn:hover:not(:disabled) { 
             background: linear-gradient(135deg, var(--tide), var(--poseidon));
             color: #fff;
         }
-        .process-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .decompress-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* ── TOKEN HISTORY ── */
+        .token-list { display: flex; flex-direction: column; gap: 0.3rem; margin-bottom: 1.5rem; }
+        .token-row {
+            background: var(--deep); border: 1px solid var(--surface); border-radius: 6px;
+            padding: 0.5rem 0.8rem; display: flex; align-items: center; gap: 0.6rem;
+            font-family: var(--font-mono); font-size: 0.6rem;
+        }
+        .token-row .word { color: var(--foam); min-width: 90px; }
+        .token-row .domain { 
+            padding: 0.1rem 0.4rem; border-radius: 3px; font-size: 0.5rem;
+            background: rgba(58,112,144,0.2); color: var(--tide);
+        }
+        .token-row .source { color: var(--mist); font-size: 0.45rem; margin-left: auto; }
 
         .log { 
             background: var(--deep); border: 1px solid var(--surface); border-radius: 6px;
@@ -117,7 +108,7 @@
     <div class="header">
         <div class="wave-icon">🌊</div>
         <h1>POSEIDON</h1>
-        <div class="header-sub">IMAGE DECOMPRESSOR · OCR · PALETTE · ROUTE</div>
+        <div class="header-sub">IMAGE DECOMPRESSOR · OCR · PALETTE · TOKENIZE</div>
     </div>
 
     <div class="telos-bar">
@@ -126,19 +117,24 @@
     </div>
 
     <div class="stats">
-        <div>Images: <span id="imageCount">—</span></div>
+        <div>Queue: <span id="queueCount">—</span></div>
         <div>Processed: <span id="processedCount">0</span></div>
+        <div>Tokens: <span id="tokenCount">—</span></div>
     </div>
 
     <div class="btn-row">
-        <button id="loadImagesBtn" class="primary">🌊 Load Images</button>
-        <button id="processAllBtn">🔍 Process All</button>
-        <button id="refreshBtn">🔄 Refresh</button>
+        <button id="loadImagesBtn" class="primary">🌊 Load Queue</button>
+        <button id="processAllBtn">🔍 Decompress All</button>
     </div>
 
-    <div class="section-title">🖼️ IMAGES · FROM DEMETER</div>
-    <div class="image-list" id="imageList">
-        <div class="image-card"><div class="image-info"><div class="prompt">Load images from Demeter to begin.</div></div></div>
+    <div class="section-title">🖼️ IMAGE QUEUE · FROM DEMETER</div>
+    <div class="image-queue" id="imageQueue">
+        <div class="queue-card"><div class="queue-info"><div class="queue-prompt">Load images to begin decompression.</div></div></div>
+    </div>
+
+    <div class="section-title">📝 TOKEN HISTORY · SENT TO HERMES</div>
+    <div class="token-list" id="tokenList">
+        <div class="token-row"><span class="word">—</span><span class="source">No tokens extracted yet.</span></div>
     </div>
 
     <div class="log" id="log"><div>🌊 Poseidon awaits the harvest.</div></div>
@@ -151,24 +147,22 @@ const sb = window.supabase.createClient(
   'sb_publishable_saeUHGocDah-T2_709M6Fg_g26JtLXw'
 );
 
-let images = [];
+let queueImages = [];
+let tokenHistory = [];
 
-// ═══════════════════════════════════════
-// DOMAIN PALETTE MAPS
-// ═══════════════════════════════════════
 const DOMAIN_KEYWORDS = {
     love: ['love','heart','desire','beauty','grace','embrace','bloom','devotion','soul','charm','rose','warm','soft','passion'],
     war: ['battle','strike','blade','shield','rage','force','enemy','weapon','armor','clash','fire','smoke','iron'],
-    wisdom: ['wisdom','knowledge','logic','reason','pattern','design','truth','mind','insight','strategy','geometric','blue','owl'],
+    wisdom: ['wisdom','knowledge','logic','reason','pattern','design','truth','mind','insight','strategy','geometric','blue'],
     storm: ['thunder','lightning','decree','order','power','authority','judgment','dominion','sky','command','dark','cloud'],
     tide: ['ocean','wave','tide','flow','depth','current','surge','abyss','water','blue','deep','sea'],
     wild: ['hunt','wild','moon','beast','forest','fang','claw','track','instinct','predator','green','moonlit'],
-    forge: ['forge','hammer','fire','craft','tool','metal','build','shape','anvil','steel','molten','sparks','orange'],
+    forge: ['forge','hammer','fire','craft','tool','metal','build','shape','anvil','steel','molten','sparks'],
     farm: ['seed','harvest','soil','growth','field','earth','cultivate','root','bloom','cycle','golden','green'],
-    crown: ['crown','throne','oath','legacy','memory','law','honor','blood','reign','covenant','stone','purple'],
+    crown: ['crown','throne','oath','legacy','memory','law','honor','blood','reign','covenant','stone'],
     light: ['light','harmony','truth','vision','song','oracle','golden','radiant','clarity','beacon','gold','glow'],
     signal: ['signal','message','swift','path','word','code','cross','courier','speed','threshold','digital','neon'],
-    vox: ['voice','utterance','echo','chant','breath','silence','scream','whisper','song','resonance','violet','echo']
+    vox: ['voice','utterance','echo','chant','breath','silence','scream','whisper','song','resonance']
 };
 
 function log(msg) { const el = document.getElementById('log'); el.innerHTML = `<div>[${new Date().toLocaleTimeString()}] ${msg}</div>` + el.innerHTML; }
@@ -184,79 +178,96 @@ async function loadTelos() {
 }
 
 // ═══════════════════════════════════════
-// LOAD IMAGES
+// LOAD QUEUE (only unprocessed images)
 // ═══════════════════════════════════════
-async function loadImages() {
-    log('🌊 Loading images from Demeter...');
+async function loadQueue() {
+    log('🌊 Loading image queue...');
     const btn = document.getElementById('loadImagesBtn');
     btn.disabled = true; btn.textContent = 'Loading...';
 
     const { data, error } = await sb.from('images')
         .select('*')
+        .eq('status', 'raw')
         .order('created_at', { ascending: false })
         .limit(12);
 
-    if (error) { log(`❌ ${error.message}`); btn.disabled = false; btn.textContent = '🌊 Load Images'; return; }
+    if (error) { log(`❌ ${error.message}`); btn.disabled = false; btn.textContent = '🌊 Load Queue'; return; }
 
-    images = data || [];
-    document.getElementById('imageCount').textContent = images.length;
-    document.getElementById('processedCount').textContent = images.filter(i => i.status === 'processed').length;
-    renderImages();
-    log(`✅ ${images.length} images loaded.`);
-    btn.disabled = false; btn.textContent = '🌊 Load Images';
+    queueImages = data || [];
+    document.getElementById('queueCount').textContent = queueImages.length;
+    
+    // Also load processed count and recent tokens
+    const [{ count: processedCount }, { data: recentTokens }] = await Promise.all([
+        sb.from('images').select('*', { count: 'exact', head: true }).eq('status', 'processed'),
+        sb.from('tokens').select('*').eq('source', 'poseidon-ocr').order('created_at', { ascending: false }).limit(20)
+    ]);
+    
+    document.getElementById('processedCount').textContent = processedCount || 0;
+    tokenHistory = recentTokens || [];
+    document.getElementById('tokenCount').textContent = tokenHistory.length;
+    
+    renderQueue();
+    renderTokenHistory();
+    log(`✅ ${queueImages.length} images in queue. ${processedCount || 0} processed.`);
+    btn.disabled = false; btn.textContent = '🌊 Load Queue';
 }
 
-function renderImages() {
-    const list = document.getElementById('imageList');
-    if (!images.length) {
-        list.innerHTML = '<div class="image-card"><div class="image-info"><div class="prompt">No images. Load from Demeter.</div></div></div>';
+function renderQueue() {
+    const list = document.getElementById('imageQueue');
+    if (!queueImages.length) {
+        list.innerHTML = '<div class="queue-card"><div class="queue-info"><div class="queue-prompt">Queue empty. All images processed. 🌊</div></div></div>';
         return;
     }
-    list.innerHTML = images.map((img, i) => `
-        <div class="image-card ${img.status === 'processed' ? 'processed' : ''}" id="image-${i}">
-            <img src="${img.image_url}" alt="Generated" loading="lazy" />
-            <div class="image-info">
-                <div class="prompt">${esc(img.prompt_text || '').substring(0, 100)}...</div>
-                <div class="meta">
-                    ${(img.domain_tags || []).map(t => `<span class="domain-tag tag-${t}">${t}</span>`).join('')}
-                    <span>${esc(img.status || 'raw')}</span>
-                </div>
-                ${img.palette ? `<div class="palette-row">${(img.palette || []).map(c => `<div class="palette-swatch" style="background:${c}" title="${c}"></div>`).join('')}</div>` : ''}
-                ${img.extracted_text ? `<div class="extracted-text">OCR: ${esc(img.extracted_text).substring(0, 120)}</div>` : ''}
-                <button class="process-btn" onclick="processImage(${i})" ${img.status === 'processed' ? 'disabled' : ''}>
-                    🔍 ${img.status === 'processed' ? 'Processed' : 'Decompress & Classify'}
-                </button>
+    list.innerHTML = queueImages.map((img, i) => `
+        <div class="queue-card" id="queue-${i}">
+            <img src="${img.image_url}" alt="Queued" loading="lazy" />
+            <div class="queue-info">
+                <div class="queue-prompt">${esc(img.prompt_text || '').substring(0, 100)}...</div>
+                <button class="decompress-btn" onclick="decompress(${i})">🔍 Decompress & Classify</button>
             </div>
         </div>
     `).join('');
 }
 
+function renderTokenHistory() {
+    const list = document.getElementById('tokenList');
+    if (!tokenHistory.length) {
+        list.innerHTML = '<div class="token-row"><span class="word">—</span><span class="source">No tokens extracted yet. Decompress an image to start.</span></div>';
+        return;
+    }
+    list.innerHTML = tokenHistory.map(t => `
+        <div class="token-row">
+            <span class="word">${esc(t.body)}</span>
+            <span class="domain">${esc(t.domain || '?')}</span>
+            <span class="source">poseidon-ocr · ${new Date(t.created_at).toLocaleTimeString()}</span>
+        </div>
+    `).join('');
+}
+
 // ═══════════════════════════════════════
-// PROCESS SINGLE IMAGE
+// DECOMPRESS SINGLE IMAGE
 // ═══════════════════════════════════════
-async function processImage(index) {
-    const img = images[index];
+async function decompress(index) {
+    const img = queueImages[index];
     if (!img) return;
 
-    const card = document.getElementById(`image-${index}`);
-    const btn = card?.querySelector('.process-btn');
+    const card = document.getElementById(`queue-${index}`);
+    const btn = card?.querySelector('.decompress-btn');
     if (btn) { btn.disabled = true; btn.textContent = '🔍 Decompressing...'; }
 
-    log(`🔍 Processing: ${img.prompt_text?.substring(0, 40)}...`);
+    log(`🔍 Decompressing: ${img.prompt_text?.substring(0, 50)}...`);
 
     try {
-        // 1. Tesseract OCR — extract text from image
+        // 1. Tesseract OCR
         let extractedText = '';
         try {
-            const { data: { text } } = await Tesseract.recognize(img.image_url, 'eng', {
-                logger: m => { if (m.status === 'recognizing text') log(`   OCR: ${Math.round(m.progress * 100)}%`); }
-            });
+            const { data: { text } } = await Tesseract.recognize(img.image_url, 'eng');
             extractedText = text.trim();
         } catch (e) {
-            log('   ⚠️ OCR failed — continuing with palette only.');
+            log('   ⚠️ No text found in image.');
         }
 
-        // 2. Color Thief — extract palette from the image
+        // 2. Color Thief palette
         let palette = [];
         try {
             const tempImg = new Image();
@@ -266,30 +277,26 @@ async function processImage(index) {
                 tempImg.onerror = reject;
                 tempImg.src = img.image_url;
             });
-            
             const thief = new ColorThief();
             palette = thief.getPalette(tempImg, 5).map(c => `#${c.map(x => x.toString(16).padStart(2, '0')).join('')}`);
         } catch (e) {
-            log('   ⚠️ Palette extraction failed.');
+            log('   ⚠️ Palette extraction skipped.');
         }
 
-        // 3. Classify domain from prompt + extracted text
+        // 3. Classify domain
         const allText = `${img.prompt_text || ''} ${extractedText}`.toLowerCase();
         const domainScores = {};
         for (const [domain, keywords] of Object.entries(DOMAIN_KEYWORDS)) {
-            domainScores[domain] = keywords.reduce((score, kw) => {
-                return score + (allText.includes(kw) ? 1 : 0);
-            }, 0);
+            domainScores[domain] = keywords.reduce((score, kw) => score + (allText.includes(kw) ? 1 : 0), 0);
         }
         const topDomains = Object.entries(domainScores)
-            .filter(([, score]) => score > 0)
+            .filter(([, s]) => s > 0)
             .sort(([, a], [, b]) => b - a)
             .slice(0, 3)
-            .map(([domain]) => domain);
+            .map(([d]) => d);
+        if (!topDomains.length) topDomains.push('signal');
 
-        if (!topDomains.length) topDomains.push('signal'); // default
-
-        // 4. Store tokens from extracted text into Hermes queue
+        // 4. Extract tokens → Hermes
         if (extractedText) {
             const words = [...new Set(extractedText.toLowerCase().match(/\b\w{3,16}\b/g) || [])];
             const tokens = words.slice(0, 20).map(w => ({
@@ -302,39 +309,52 @@ async function processImage(index) {
             }));
             if (tokens.length) {
                 await sb.from('tokens').upsert(tokens, { onConflict: 'body' });
-                log(`   📝 ${tokens.length} tokens extracted and routed to Hermes.`);
+                log(`   📝 ${tokens.length} tokens sent to Hermes (tokens table).`);
             }
         }
 
-        // 5. Update image record
+        // 5. Update image — marks it as processed, removes from queue
         await sb.from('images').update({
             domain_tags: topDomains,
             palette: palette,
-            extracted_text: extractedText,
-            status: 'processed',
-            crowned: true
+            extracted_text: extractedText || '',
+            status: 'processed'
         }).eq('id', img.id);
 
-        log(`✅ Image classified: ${topDomains.join(', ')}. Routed to pantheon.`);
-        await loadImages();
+        // 6. Remove from local queue
+        queueImages.splice(index, 1);
+        document.getElementById('queueCount').textContent = queueImages.length;
+        renderQueue();
+        
+        // Refresh token history
+        const { data: recentTokens } = await sb.from('tokens')
+            .select('*').eq('source', 'poseidon-ocr')
+            .order('created_at', { ascending: false }).limit(20);
+        tokenHistory = recentTokens || [];
+        document.getElementById('tokenCount').textContent = tokenHistory.length;
+        renderTokenHistory();
+
+        const { count: processedCount } = await sb.from('images')
+            .select('*', { count: 'exact', head: true }).eq('status', 'processed');
+        document.getElementById('processedCount').textContent = processedCount || 0;
+
+        log(`✅ Classified as ${topDomains.join(', ')}. Image tagged. Tokens sent to Hermes.`);
 
     } catch (e) {
-        log(`❌ Processing failed: ${e.message}`);
+        log(`❌ Decompress failed: ${e.message}`);
         if (btn) { btn.disabled = false; btn.textContent = '🔍 Decompress & Classify'; }
     }
 }
-window.processImage = processImage;
+window.decompress = decompress;
 
 // ═══════════════════════════════════════
-// PROCESS ALL
+// DECOMPRESS ALL
 // ═══════════════════════════════════════
-async function processAll() {
-    const raw = images.filter(i => i.status !== 'processed');
-    if (!raw.length) { log('No unprocessed images.'); return; }
-    log(`🌊 Processing ${raw.length} images...`);
-    for (let i = 0; i < raw.length; i++) {
-        const idx = images.indexOf(raw[i]);
-        await processImage(idx);
+async function decompressAll() {
+    if (!queueImages.length) { log('Queue empty.'); return; }
+    log(`🌊 Decompressing ${queueImages.length} images...`);
+    while (queueImages.length > 0) {
+        await decompress(0);
     }
 }
 
@@ -344,13 +364,12 @@ function esc(s) { return String(s || '').replace(/[&<>"']/g, c => ({ '&':'&amp;'
 // INIT
 // ═══════════════════════════════════════
 loadTelos();
-loadImages();
+loadQueue();
 
-document.getElementById('loadImagesBtn').onclick = loadImages;
-document.getElementById('processAllBtn').onclick = processAll;
-document.getElementById('refreshBtn').onclick = () => loadImages();
+document.getElementById('loadImagesBtn').onclick = loadQueue;
+document.getElementById('processAllBtn').onclick = decompressAll;
 
-log('🌊 Poseidon ready. Images → OCR → Palette → Domain → Route.');
+log('🌊 Poseidon ready. Queue → Decompress → Tokenize → Route.');
 </script>
 </body>
 </html>
