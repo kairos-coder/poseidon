@@ -3,221 +3,354 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🌊 Poseidon · Tide Temple</title>
+    <title>🌊 Poseidon · Image Decompressor</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/colorthief@2/dist/color-thief.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Crimson+Pro:ital,wght@0,300;0,400;1,300&family=JetBrains+Mono:wght@300;400;500&display=swap');
         :root {
-            --abyss: #060d14; --deep: #0a1628; --trench: #0d1f3c; --surface: #142840;
-            --tide: #3a7090; --foam: #7ab8d0; --current: #50a0c0; --abyssal: #1a4a60;
-            --text: #c8dce8; --muted: #5a8098; --gold: #c8943a;
+            --void: #080a0f; --deep: #0b0e16; --surface: #1e2535;
+            --poseidon: #3a7090; --tide: #5a9ab0; --abyss: #1a4050; --foam: #a0d0e0;
+            --mist: #6a7a8a; --pale: #d4e0ed; --gold: #c8943a;
             --font-display: 'Cinzel', serif; --font-body: 'Crimson Pro', serif; --font-mono: 'JetBrains Mono', monospace;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
-            background: var(--abyss); font-family: var(--font-body); color: var(--text); min-height: 100vh;
+            background: var(--void); font-family: var(--font-body); color: var(--pale); 
+            min-height: 100vh; font-size: 18px;
             background-image: 
-                radial-gradient(ellipse at 50% 0%, rgba(58,112,144,0.1) 0%, transparent 60%),
-                radial-gradient(ellipse at 20% 80%, rgba(26,74,96,0.15) 0%, transparent 50%),
-                linear-gradient(180deg, var(--abyss) 0%, var(--deep) 40%, var(--trench) 100%);
+                radial-gradient(ellipse 60% 40% at 50% 0%, rgba(58,112,144,0.08) 0%, transparent 60%),
+                radial-gradient(ellipse 40% 50% at 80% 100%, rgba(90,154,176,0.04) 0%, transparent 50%);
+            background-attachment: fixed;
         }
-        .container { max-width: 1100px; margin: 0 auto; padding: 2rem; position: relative; }
+        .container { max-width: 700px; margin: 0 auto; padding: 1.2rem; }
 
-        .header { text-align: center; margin-bottom: 2rem; padding: 3rem 2rem; position: relative; }
-        .header::before {
-            content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
-            width: 200px; height: 200px;
-            background: radial-gradient(circle, rgba(58,112,144,0.2) 0%, transparent 70%);
-            pointer-events: none;
+        .telos-bar {
+            background: rgba(58,112,144,0.06); border: 1px solid rgba(58,112,144,0.3);
+            border-left: 3px solid var(--tide); border-radius: 6px;
+            padding: 0.7rem 1rem; margin-bottom: 1rem;
+            display: flex; align-items: center; gap: 0.6rem;
         }
-        .header h1 { font-family: var(--font-display); font-size: 3rem; color: var(--foam); letter-spacing: 6px; position: relative; z-index: 1; }
-        .header-sub { font-family: var(--font-mono); font-size: 0.55rem; color: var(--muted); letter-spacing: 3px; margin-top: 0.5rem; position: relative; z-index: 1; }
-        .domain-badge { display: inline-block; padding: 0.2rem 0.8rem; border-radius: 3px; font-family: var(--font-mono); font-size: 0.5rem; background: rgba(58,112,144,0.2); color: var(--foam); border: 1px solid var(--tide); margin-top: 0.8rem; position: relative; z-index: 1; }
-        .telos { font-family: var(--font-body); font-size: 0.85rem; font-style: italic; color: var(--muted); margin-top: 1rem; position: relative; z-index: 1; max-width: 500px; margin-left: auto; margin-right: auto; }
+        .telos-bar .telos-label { font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 3px; color: var(--tide); text-transform: uppercase; }
+        .telos-bar .telos-text { font-family: var(--font-body); font-size: 0.9rem; color: var(--foam); font-style: italic; flex: 1; }
+        .telos-bar .telos-text.empty { color: var(--mist); }
 
-        .depth-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.6rem; margin-bottom: 2rem; }
-        .depth-card { background: var(--deep); border: 1px solid var(--surface); border-radius: 8px; padding: 1rem; text-align: center; transition: all 0.3s; }
-        .depth-card:hover { transform: translateY(-2px); border-color: var(--tide); box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
-        .depth-value { font-family: var(--font-display); font-size: 1.8rem; color: var(--foam); }
-        .depth-label { font-family: var(--font-mono); font-size: 0.45rem; color: var(--muted); letter-spacing: 1px; margin-top: 0.3rem; }
+        .header { text-align: center; margin-bottom: 1rem; padding-bottom: 0.8rem; border-bottom: 1px solid rgba(58,112,144,0.2); }
+        .header h1 { font-family: var(--font-display); font-size: 2.2rem; color: var(--tide); letter-spacing: 4px; }
+        .header-sub { font-family: var(--font-mono); font-size: 0.6rem; color: var(--mist); letter-spacing: 2px; margin-top: 0.2rem; }
+        .wave-icon { font-size: 2rem; display: inline-block; animation: wave 3s ease-in-out infinite; }
+        @keyframes wave { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
 
-        .flow-section { background: var(--deep); border: 1px solid var(--surface); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; position: relative; overflow: hidden; }
-        .flow-section::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--tide), transparent); }
-        .flow-title { font-family: var(--font-display); font-size: 0.7rem; letter-spacing: 3px; color: var(--foam); margin-bottom: 1rem; text-align: center; }
+        .stats { display: flex; gap: 1.5rem; justify-content: center; margin-bottom: 1rem; font-family: var(--font-mono); font-size: 0.7rem; color: var(--mist); flex-wrap: wrap; }
+        .stats span { color: var(--foam); font-weight: 500; }
 
-        .current-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.5rem; }
-        .current-card { background: rgba(13,31,60,0.6); border: 1px solid var(--surface); border-radius: 6px; padding: 0.8rem; text-align: center; transition: all 0.2s; }
-        .current-card:hover { border-color: var(--tide); }
-        .current-name { font-family: var(--font-display); font-size: 0.6rem; color: var(--foam); margin-bottom: 0.3rem; }
-        .current-count { font-family: var(--font-mono); font-size: 0.7rem; color: var(--text); }
-        .current-god { font-family: var(--font-mono); font-size: 0.4rem; color: var(--muted); margin-top: 0.2rem; }
+        .btn-row { display: flex; gap: 0.6rem; margin-bottom: 1.2rem; flex-wrap: wrap; }
+        button {
+            font-family: var(--font-mono); font-size: 0.7rem; padding: 0.7rem 1.2rem; border-radius: 6px;
+            cursor: pointer; border: 1px solid rgba(58,112,144,0.3); background: var(--deep);
+            color: var(--foam); transition: all 0.25s; letter-spacing: 1px;
+            flex: 1; min-width: 120px; min-height: 48px;
+        }
+        button:hover:not(:disabled) { background: var(--poseidon); color: #fff; border-color: var(--tide); }
+        button.primary { background: var(--poseidon); color: #fff; border-color: var(--tide); font-weight: bold; }
+        button.primary:hover:not(:disabled) { background: var(--tide); }
+        button:disabled { opacity: 0.3; cursor: not-allowed; }
 
-        .controls { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 2rem; flex-wrap: wrap; }
-        button { font-family: var(--font-mono); font-size: 0.6rem; padding: 0.6rem 1.2rem; border-radius: 6px; cursor: pointer; border: 1px solid var(--surface); background: var(--trench); color: var(--text); transition: all 0.2s; letter-spacing: 1px; }
-        button:hover:not(:disabled) { background: var(--tide); color: #fff; border-color: var(--foam); box-shadow: 0 0 20px rgba(58,112,144,0.3); }
-        button.primary { background: var(--tide); color: #fff; border-color: var(--foam); }
-        button:disabled { opacity: 0.4; cursor: not-allowed; }
-        .spin { display: inline-block; animation: spin 0.8s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        .section-title { font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 3px; color: var(--mist); margin-bottom: 0.8rem; }
 
-        .log { background: rgba(6,13,20,0.8); border: 1px solid var(--surface); border-radius: 8px; padding: 0.8rem; max-height: 120px; overflow-y: auto; font-family: var(--font-mono); font-size: 0.5rem; color: var(--muted); }
-        .empty-state { grid-column: 1/-1; text-align: center; padding: 2rem; color: var(--muted); font-style: italic; font-size: 0.8rem; }
+        .image-list { display: flex; flex-direction: column; gap: 0.8rem; margin-bottom: 1.5rem; }
+        .image-card { 
+            background: var(--deep); border: 1px solid var(--surface); border-radius: 10px;
+            overflow: hidden; transition: all 0.3s;
+        }
+        .image-card.processed { border-color: var(--poseidon); }
+        .image-card img { width: 100%; display: block; }
+        .image-info { padding: 0.8rem; }
+        .image-info .prompt { font-family: var(--font-body); font-size: 0.75rem; font-style: italic; color: var(--pale); margin-bottom: 0.4rem; }
+        .image-info .meta { font-family: var(--font-mono); font-size: 0.5rem; color: var(--mist); display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: center; }
+        .domain-tag { padding: 0.15rem 0.5rem; border-radius: 3px; font-size: 0.5rem; }
+        .tag-love { background: rgba(176,88,112,0.2); color: #c07080; }
+        .tag-war { background: rgba(192,56,42,0.2); color: #d05040; }
+        .tag-wisdom { background: rgba(106,136,152,0.2); color: #8aa8b8; }
+        .tag-light { background: rgba(212,168,80,0.2); color: #d4a850; }
+        .tag-farm { background: rgba(90,128,64,0.2); color: #7ab060; }
+        .tag-forge { background: rgba(192,112,64,0.2); color: #c07040; }
+        .tag-crown { background: rgba(90,122,170,0.2); color: #8a9ac0; }
+        .tag-tide { background: rgba(58,112,144,0.2); color: #5a9ab0; }
+        .tag-wild { background: rgba(90,128,80,0.2); color: #6a9a60; }
+        .tag-storm { background: rgba(154,138,192,0.2); color: #a090c0; }
+        .tag-signal { background: rgba(212,184,74,0.2); color: #d4b84a; }
+        .tag-vox { background: rgba(138,64,128,0.2); color: #b060a0; }
 
-        @media (max-width: 768px) { .depth-grid { grid-template-columns: repeat(2, 1fr); } }
+        .palette-row { display: flex; gap: 0.3rem; margin-top: 0.4rem; }
+        .palette-swatch { width: 24px; height: 24px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); }
+
+        .extracted-text { 
+            font-family: var(--font-mono); font-size: 0.5rem; color: var(--mist); 
+            margin-top: 0.4rem; padding: 0.4rem; background: rgba(0,0,0,0.3); border-radius: 4px;
+        }
+
+        .process-btn {
+            width: 100%; padding: 0.6rem; font-size: 0.7rem; font-weight: bold;
+            background: linear-gradient(135deg, var(--poseidon), var(--abyss));
+            color: var(--foam); border: 1px solid var(--tide); border-radius: 8px;
+            cursor: pointer; font-family: var(--font-mono); letter-spacing: 2px;
+            min-height: 44px; transition: all 0.3s; margin-top: 0.5rem;
+        }
+        .process-btn:hover:not(:disabled) { 
+            background: linear-gradient(135deg, var(--tide), var(--poseidon));
+            color: #fff;
+        }
+        .process-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .log { 
+            background: var(--deep); border: 1px solid var(--surface); border-radius: 6px;
+            padding: 0.6rem; max-height: 120px; overflow-y: auto;
+            font-family: var(--font-mono); font-size: 0.55rem; color: var(--mist); line-height: 1.6;
+        }
     </style>
 </head>
 <body>
 <div class="container">
 
     <div class="header">
-        <h1>🌊 POSEI<span>DON</span></h1>
-        <div class="header-sub">TIDE TEMPLE · DOMAIN: TIDE · PYTHAGOREAN #8 · THE OGDOAD</div>
-        <div class="domain-badge">TIDE · FLOW · DEPTH · CURRENT</div>
-        <div class="telos">"I map the deep. I chart the currents. What moves beneath the surface is my domain."</div>
+        <div class="wave-icon">🌊</div>
+        <h1>POSEIDON</h1>
+        <div class="header-sub">IMAGE DECOMPRESSOR · OCR · PALETTE · ROUTE</div>
     </div>
 
-    <div class="depth-grid" id="depthGrid">
-        <div class="depth-card"><div class="depth-value" id="depthTide">—</div><div class="depth-label">Tide Tokens</div></div>
-        <div class="depth-card"><div class="depth-value" id="depthFlows">—</div><div class="depth-label">Active Flows</div></div>
-        <div class="depth-card"><div class="depth-value" id="depthStreams">—</div><div class="depth-label">Data Streams</div></div>
-        <div class="depth-card"><div class="depth-value" id="depthCurrents">—</div><div class="depth-label">Mapped Currents</div></div>
+    <div class="telos-bar">
+        <span class="telos-label">🎯 TELOS</span>
+        <span class="telos-text empty" id="telosText">Loading...</span>
     </div>
 
-    <div class="flow-section">
-        <div class="flow-title">🌊 CURRENT FLOWS · CROSS-DOMAIN DATA MOVEMENT</div>
-        <div class="current-grid" id="currentGrid">
-            <div class="empty-state">Claim tide tokens to sense the currents.</div>
-        </div>
+    <div class="stats">
+        <div>Images: <span id="imageCount">—</span></div>
+        <div>Processed: <span id="processedCount">0</span></div>
     </div>
 
-    <div class="controls">
-        <button id="claimBtn" class="primary">🌊 Claim Tide Tokens</button>
-        <button id="mapBtn" disabled>🌊 Map Currents</button>
-        <button id="dispatchBtn" disabled>📤 Dispatch to Athena</button>
+    <div class="btn-row">
+        <button id="loadImagesBtn" class="primary">🌊 Load Images</button>
+        <button id="processAllBtn">🔍 Process All</button>
+        <button id="refreshBtn">🔄 Refresh</button>
     </div>
 
-    <div class="log" id="log"><div>🌊 Poseidon waiting. The deep holds its secrets.</div></div>
+    <div class="section-title">🖼️ IMAGES · FROM DEMETER</div>
+    <div class="image-list" id="imageList">
+        <div class="image-card"><div class="image-info"><div class="prompt">Load images from Demeter to begin.</div></div></div>
+    </div>
+
+    <div class="log" id="log"><div>🌊 Poseidon awaits the harvest.</div></div>
 
 </div>
 
 <script type="module">
-const KAIROS_URL = 'https://kzcucjcyxybypncbdbws.supabase.co';
-const KAIROS_KEY = 'sb_publishable_saeUHGocDah-T2_709M6Fg_g26JtLXw';
-const sb = window.supabase.createClient(KAIROS_URL, KAIROS_KEY);
+const sb = window.supabase.createClient(
+  'https://kzcucjcyxybypncbdbws.supabase.co',
+  'sb_publishable_saeUHGocDah-T2_709M6Fg_g26JtLXw'
+);
 
-let myVocab = [];
-let currents = [];
+let images = [];
 
-const TIDE_SEEDS = new Set([
-    'tide','wave','deep','flow','current','ocean','sea','storm','flood','depth',
-    'blue','salt','water','river','stream','surge','swell','whirlpool','abyss',
-    'current','drift','undertow','rip','eddy','maelstrom','tsunami','breaker'
-]);
+// ═══════════════════════════════════════
+// DOMAIN PALETTE MAPS
+// ═══════════════════════════════════════
+const DOMAIN_KEYWORDS = {
+    love: ['love','heart','desire','beauty','grace','embrace','bloom','devotion','soul','charm','rose','warm','soft','passion'],
+    war: ['battle','strike','blade','shield','rage','force','enemy','weapon','armor','clash','fire','smoke','iron'],
+    wisdom: ['wisdom','knowledge','logic','reason','pattern','design','truth','mind','insight','strategy','geometric','blue','owl'],
+    storm: ['thunder','lightning','decree','order','power','authority','judgment','dominion','sky','command','dark','cloud'],
+    tide: ['ocean','wave','tide','flow','depth','current','surge','abyss','water','blue','deep','sea'],
+    wild: ['hunt','wild','moon','beast','forest','fang','claw','track','instinct','predator','green','moonlit'],
+    forge: ['forge','hammer','fire','craft','tool','metal','build','shape','anvil','steel','molten','sparks','orange'],
+    farm: ['seed','harvest','soil','growth','field','earth','cultivate','root','bloom','cycle','golden','green'],
+    crown: ['crown','throne','oath','legacy','memory','law','honor','blood','reign','covenant','stone','purple'],
+    light: ['light','harmony','truth','vision','song','oracle','golden','radiant','clarity','beacon','gold','glow'],
+    signal: ['signal','message','swift','path','word','code','cross','courier','speed','threshold','digital','neon'],
+    vox: ['voice','utterance','echo','chant','breath','silence','scream','whisper','song','resonance','violet','echo']
+};
 
-function log(msg) {
-    const el = document.getElementById('log');
-    el.innerHTML = `<div>[${new Date().toLocaleTimeString()}] ${msg}</div>` + el.innerHTML;
-    while (el.children.length > 30) el.removeChild(el.lastChild);
+function log(msg) { const el = document.getElementById('log'); el.innerHTML = `<div>[${new Date().toLocaleTimeString()}] ${msg}</div>` + el.innerHTML; }
+
+// ═══════════════════════════════════════
+// TELOS
+// ═══════════════════════════════════════
+async function loadTelos() {
+  const { data } = await sb.from('telos').select('statement').eq('is_active', true).maybeSingle();
+  const el = document.getElementById('telosText');
+  el.textContent = data?.statement || 'No active telos — set one in Hera';
+  el.classList.toggle('empty', !data?.statement);
 }
 
-async function claimTokens() {
-    log('Claiming tide tokens...');
-    document.getElementById('claimBtn').disabled = true;
-    document.getElementById('claimBtn').innerHTML = '<span class="spin">⟳</span> Claiming...';
+// ═══════════════════════════════════════
+// LOAD IMAGES
+// ═══════════════════════════════════════
+async function loadImages() {
+    log('🌊 Loading images from Demeter...');
+    const btn = document.getElementById('loadImagesBtn');
+    btn.disabled = true; btn.textContent = 'Loading...';
 
-    const { data: tokens } = await sb.from('concepts')
-        .select('*').eq('domain', 'tide').eq('state', 'raw').eq('band', 'hermes')
-        .order('score', { ascending: false }).limit(40);
+    const { data, error } = await sb.from('images')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(12);
 
-    if (!tokens?.length) {
-        log('No tide tokens. Run Hermes → Seed All Domains.');
-        document.getElementById('claimBtn').disabled = false;
-        document.getElementById('claimBtn').textContent = '🌊 Claim Tide Tokens';
+    if (error) { log(`❌ ${error.message}`); btn.disabled = false; btn.textContent = '🌊 Load Images'; return; }
+
+    images = data || [];
+    document.getElementById('imageCount').textContent = images.length;
+    document.getElementById('processedCount').textContent = images.filter(i => i.status === 'processed').length;
+    renderImages();
+    log(`✅ ${images.length} images loaded.`);
+    btn.disabled = false; btn.textContent = '🌊 Load Images';
+}
+
+function renderImages() {
+    const list = document.getElementById('imageList');
+    if (!images.length) {
+        list.innerHTML = '<div class="image-card"><div class="image-info"><div class="prompt">No images. Load from Demeter.</div></div></div>';
         return;
     }
-
-    for (const t of tokens) {
-        const word = (t.body || '').toLowerCase();
-        if (!myVocab.find(v => v.word === word)) myVocab.push({ word, tideScore: TIDE_SEEDS.has(word) ? 0.8 : 0.4 });
-        await sb.from('concepts').update({ state: 'claimed', realm: 'poseidon' }).eq('id', t.id);
-    }
-
-    document.getElementById('depthTide').textContent = tokens.length;
-    document.getElementById('mapBtn').disabled = myVocab.length < 3;
-    log(`Claimed ${tokens.length} tide tokens.`);
-    document.getElementById('claimBtn').disabled = false;
-    document.getElementById('claimBtn').textContent = '🌊 Claim Tide Tokens';
-}
-
-async function mapCurrents() {
-    log('Mapping cross-domain currents...');
-    document.getElementById('mapBtn').disabled = true;
-    document.getElementById('mapBtn').innerHTML = '<span class="spin">⟳</span> Mapping...';
-    currents = [];
-
-    const flowDomains = ['signal','love','war','farm','forge','wisdom','tide','vox'];
-    
-    for (const domain of flowDomains) {
-        try {
-            const { count } = await sb.from('concepts')
-                .select('*', { count: 'exact', head: true })
-                .eq('domain', domain).eq('state', 'raw');
-            
-            if (count > 0) {
-                currents.push({ domain, flow: count, direction: domain === 'tide' ? 'self' : count > 50 ? 'strong' : count > 20 ? 'moderate' : 'gentle' });
-            }
-        } catch {}
-    }
-
-    currents.sort((a, b) => b.flow - a.flow);
-    document.getElementById('depthFlows').textContent = currents.length;
-    document.getElementById('depthStreams').textContent = currents.reduce((s, c) => s + c.flow, 0);
-    document.getElementById('depthCurrents').textContent = currents.filter(c => c.direction === 'strong').length;
-    document.getElementById('dispatchBtn').disabled = !currents.length;
-    renderCurrents();
-    log(`Mapped ${currents.length} currents.`);
-    document.getElementById('mapBtn').disabled = false;
-    document.getElementById('mapBtn').textContent = '🌊 Map Currents';
-}
-
-function renderCurrents() {
-    const grid = document.getElementById('currentGrid');
-    if (!currents.length) {
-        grid.innerHTML = '<div class="empty-state">Claim tide tokens to sense the currents.</div>';
-        return;
-    }
-    grid.innerHTML = currents.map(c => `
-        <div class="current-card">
-            <div class="current-name">${c.domain.toUpperCase()}</div>
-            <div class="current-count">${c.flow}</div>
-            <div class="current-god">${c.direction} current</div>
+    list.innerHTML = images.map((img, i) => `
+        <div class="image-card ${img.status === 'processed' ? 'processed' : ''}" id="image-${i}">
+            <img src="${img.image_url}" alt="Generated" loading="lazy" />
+            <div class="image-info">
+                <div class="prompt">${esc(img.prompt_text || '').substring(0, 100)}...</div>
+                <div class="meta">
+                    ${(img.domain_tags || []).map(t => `<span class="domain-tag tag-${t}">${t}</span>`).join('')}
+                    <span>${esc(img.status || 'raw')}</span>
+                </div>
+                ${img.palette ? `<div class="palette-row">${(img.palette || []).map(c => `<div class="palette-swatch" style="background:${c}" title="${c}"></div>`).join('')}</div>` : ''}
+                ${img.extracted_text ? `<div class="extracted-text">OCR: ${esc(img.extracted_text).substring(0, 120)}</div>` : ''}
+                <button class="process-btn" onclick="processImage(${i})" ${img.status === 'processed' ? 'disabled' : ''}>
+                    🔍 ${img.status === 'processed' ? 'Processed' : 'Decompress & Classify'}
+                </button>
+            </div>
         </div>
     `).join('');
 }
 
-async function archiveSelf() {
+// ═══════════════════════════════════════
+// PROCESS SINGLE IMAGE
+// ═══════════════════════════════════════
+async function processImage(index) {
+    const img = images[index];
+    if (!img) return;
+
+    const card = document.getElementById(`image-${index}`);
+    const btn = card?.querySelector('.process-btn');
+    if (btn) { btn.disabled = true; btn.textContent = '🔍 Decompressing...'; }
+
+    log(`🔍 Processing: ${img.prompt_text?.substring(0, 40)}...`);
+
     try {
-        const html = document.documentElement.outerHTML;
-        await sb.from('html').upsert({
-            filename: 'poseidon.html', title: '🌊 Poseidon · Tide Temple', type: 'olympian',
-            content: html, description: 'Claims tide tokens, maps cross-domain data currents, dispatches flow reports',
-            reads_from: ['concepts'], writes_to: ['poseidon_dispatch'],
-            models_used: [], url: window.location.href, updated_at: new Date().toISOString()
-        }, { onConflict: 'filename' });
-    } catch {}
+        // 1. Tesseract OCR — extract text from image
+        let extractedText = '';
+        try {
+            const { data: { text } } = await Tesseract.recognize(img.image_url, 'eng', {
+                logger: m => { if (m.status === 'recognizing text') log(`   OCR: ${Math.round(m.progress * 100)}%`); }
+            });
+            extractedText = text.trim();
+        } catch (e) {
+            log('   ⚠️ OCR failed — continuing with palette only.');
+        }
+
+        // 2. Color Thief — extract palette from the image
+        let palette = [];
+        try {
+            const tempImg = new Image();
+            tempImg.crossOrigin = 'anonymous';
+            await new Promise((resolve, reject) => {
+                tempImg.onload = resolve;
+                tempImg.onerror = reject;
+                tempImg.src = img.image_url;
+            });
+            
+            const thief = new ColorThief();
+            palette = thief.getPalette(tempImg, 5).map(c => `#${c.map(x => x.toString(16).padStart(2, '0')).join('')}`);
+        } catch (e) {
+            log('   ⚠️ Palette extraction failed.');
+        }
+
+        // 3. Classify domain from prompt + extracted text
+        const allText = `${img.prompt_text || ''} ${extractedText}`.toLowerCase();
+        const domainScores = {};
+        for (const [domain, keywords] of Object.entries(DOMAIN_KEYWORDS)) {
+            domainScores[domain] = keywords.reduce((score, kw) => {
+                return score + (allText.includes(kw) ? 1 : 0);
+            }, 0);
+        }
+        const topDomains = Object.entries(domainScores)
+            .filter(([, score]) => score > 0)
+            .sort(([, a], [, b]) => b - a)
+            .slice(0, 3)
+            .map(([domain]) => domain);
+
+        if (!topDomains.length) topDomains.push('signal'); // default
+
+        // 4. Store tokens from extracted text into Hermes queue
+        if (extractedText) {
+            const words = [...new Set(extractedText.toLowerCase().match(/\b\w{3,16}\b/g) || [])];
+            const tokens = words.slice(0, 20).map(w => ({
+                body: w,
+                domain: topDomains[0],
+                word_type: 'S',
+                score: 40,
+                source: 'poseidon-ocr',
+                created_at: new Date().toISOString()
+            }));
+            if (tokens.length) {
+                await sb.from('tokens').upsert(tokens, { onConflict: 'body' });
+                log(`   📝 ${tokens.length} tokens extracted and routed to Hermes.`);
+            }
+        }
+
+        // 5. Update image record
+        await sb.from('images').update({
+            domain_tags: topDomains,
+            palette: palette,
+            extracted_text: extractedText,
+            status: 'processed',
+            crowned: true
+        }).eq('id', img.id);
+
+        log(`✅ Image classified: ${topDomains.join(', ')}. Routed to pantheon.`);
+        await loadImages();
+
+    } catch (e) {
+        log(`❌ Processing failed: ${e.message}`);
+        if (btn) { btn.disabled = false; btn.textContent = '🔍 Decompress & Classify'; }
+    }
+}
+window.processImage = processImage;
+
+// ═══════════════════════════════════════
+// PROCESS ALL
+// ═══════════════════════════════════════
+async function processAll() {
+    const raw = images.filter(i => i.status !== 'processed');
+    if (!raw.length) { log('No unprocessed images.'); return; }
+    log(`🌊 Processing ${raw.length} images...`);
+    for (let i = 0; i < raw.length; i++) {
+        const idx = images.indexOf(raw[i]);
+        await processImage(idx);
+    }
 }
 
-function init() {
-    document.getElementById('claimBtn').onclick = claimTokens;
-    document.getElementById('mapBtn').onclick = mapCurrents;
-    document.getElementById('dispatchBtn').onclick = () => {
-        log('📤 Current map dispatched to Athena.');
-        document.getElementById('dispatchBtn').disabled = true;
-    };
-    setTimeout(archiveSelf, 3000);
-    log('🌊 Poseidon — Pythagorean #8. The deep observes.');
-}
-init();
+function esc(s) { return String(s || '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]); }
+
+// ═══════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════
+loadTelos();
+loadImages();
+
+document.getElementById('loadImagesBtn').onclick = loadImages;
+document.getElementById('processAllBtn').onclick = processAll;
+document.getElementById('refreshBtn').onclick = () => loadImages();
+
+log('🌊 Poseidon ready. Images → OCR → Palette → Domain → Route.');
 </script>
 </body>
 </html>
